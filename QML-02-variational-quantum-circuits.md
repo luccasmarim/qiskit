@@ -21,7 +21,7 @@ Iniciaremos nosso artigo com o método mais simples possível de machine learnin
 ![circuitA](/variational-quantum-classifier.png)
 Fonte: Qiskit - https://www.youtube.com/watch?v=-sxlXNz7ZxU&list=PLOFEBzvs-VvqJwybFxkTiDzhf5E11p8BI&index=10
 
-Comecemos com o conceito de expressabilidade de um circuito quântico. Este indicativo, coletado pela referência [ref.I] trata-se quantos estados em nosso espaço de Hilbert (nesse caso a Bloch Sphere) podemos alcançar com nosso circuito variacional. Seguindo a referência [ref.V], temos como exemplo dois circuitos onde no primeiro aplicamos apenas Hadamard e um gate RZ no nosso qubit. Comparando com o segundo circuito, que conta com uma Hadamard, um RZ e um RY podemos perceber que nossa intuição está correta: o segundo circuito consegue alcançar mais estados e portanto possui uma gama mais vasta de opções.
+Comecemos com o conceito de expressabilidade de um circuito quântico. Este indicativo, coletado pela referência [ref.I] trata-se de quantos estados em nosso espaço de Hilbert (podendo ser a Bloch Sphere para um qubit e.g.) podemos alcançar com nosso circuito variacional. Seguindo a referência [ref.V], temos como exemplo dois circuitos onde no primeiro aplicamos apenas Hadamard e um gate RZ no nosso qubit. Comparando com o segundo circuito, que conta com uma Hadamard, um RZ e um RY podemos perceber que nossa intuição está correta: o segundo circuito consegue alcançar mais estados e portanto possui uma gama mais vasta de opções de estado para treinamento.
 
 ![circuitA](/circuitA.png)
 Fonte: Qiskit - Introduction to QML
@@ -32,17 +32,17 @@ Fonte: Qiskit - Introduction to QML
 Entretanto, como podemos fazer infinitas rotações apenas com RZ, nós realmente precisamos alcançar toda a Bloch Sphere? Realmente precisamos utilizar circuitos mais complicados para realizar treinamento? A resposta para esse questionamento está na referência [ref.I] ...
 O importante aqui é entendermos que em questão de expressabilidade, o segundo circuito tem vantagem.
 
-Passemos agora para outro parametro de comparação entre ansatz fornecido pela referência [ref.I]: o conceito de capacidade de emaranhamento.
-Este parâmetro de comparação entre circuitos quânticos variacionais trata-se do quão emaranhado seu estado inicial estará após passar pelo circuito. Naturalmente, o emaranhamento é uma propriedade fundamental da mecânica quântica que usamos para ganhar alguma vantagem quando o assunto é velocidade de processamento. A aplicação de gates CNOT é fundamental para aumentar essa característica do circuito.
+Passemos agora para outro parâmetro de comparação entre ansatz fornecido pela referência [ref.I]: o conceito de capacidade de emaranhamento.
+Este parâmetro de comparação entre circuitos quânticos variacionais trata-se do quão emaranhado seu estado inicial estará após passar pelo circuito. Naturalmente, o emaranhamento é uma propriedade fundamental da mecânica quântica que usamos para ganhar alguma vantagem quando o assunto é performance. A aplicação de gates CNOT é fundamental para aumentar essa característica do circuito.
 Existem métodos teóricos para calcular o quão emaranhado um sistema correspondente a um circuito é. Uma delas é a medida de Meyer-Wallach conforme comentado superficialmente pela referência [ref.V]. Conforme [ref.VI], a medida de Meyer-Wallach é calculada pela expressão:
 
 $$
 Q(\psi) = \frac{1}{n} \sum_{k=1}^{n} 2(1-Tr[\rho_k ^2 ])
 $$
 
-Onde $$\psi$$ é nosso estado, e $$Tr[\rho_k ^2 ]$$ é o traço da matriz do operador densidade ao quadrado de cada qubit individual quando decompomos do nosso estado em termos da base. Apresentamos um script em Python para o calculo desta métrica em apêndice I. 
+Onde $$\psi$$ é nosso estado, e $$Tr[\rho_k ^2 ]$$ é o traço da matriz do operador densidade ao quadrado de cada qubit individual quando decompomos do nosso estado em termos da base. Apresentamos um script em Python para o cálculo desta métrica em apêndice I. 
 
-Voltando para Quantum Machine Learning, estas duas métricas são utilizadas para verificar o quão adequado um certo ansatz é. Em referência [ref.I] podemos encontrar um estudo mais adequado sobre ambos conceitos e suas formulações matemáticas.
+Voltando para Quantum Machine Learning, estas duas métricas podem ser utilizadas para verificar o quão adequado um certo ansatz é. Em referência [ref.I] podemos encontrar um estudo mais adequado sobre ambos conceitos e suas formulações matemáticas.
 
 ## Circuitos Variacionais para Machine Learning
 
@@ -66,13 +66,35 @@ for i in range(n):
 
 qc.draw()
 ```
-Aqui estamos adicionando dois gates de rotação em torno dos eixos Y e Z para cada qubit do sistema. A cada iteração do sistema o valor de cada um desses paramêtros
+Aqui estamos adicionando dois gates de rotação em torno dos eixos Y e Z para cada qubit do sistema. A cada iteração do sistema o valor de cada um desses paramêtros pode ser alterado.
+
+Em [ref.VIII] temos um script utilizando o PennyLane para um circuito quântico variacional dado por:
+
+```
+def H_layer(nqubits):
+    for idx in range(nqubits):
+        qml.Hadamard(wires=idx)
+# Nesse layer adicionamos gates de Hadamard para usar as propriedades de superposição de nosso modelo.
+
+def RY_layer(w):
+    for idx, element in enumerate(w):
+        qml.RY(element, wires=idx)
+# Nesse layer adicionamos gates de rotação em torno do eixo Y.
+
+def entangling_layer(nqubits):
+    for i in range(0, nqubits - 1, 2):  # Loop over even indices: i=0,2,...N-2
+        qml.CNOT(wires=[i, i + 1])
+    for i in range(1, nqubits - 1, 2):  # Loop over odd indices:  i=1,3,...N-3
+        qml.CNOT(wires=[i, i + 1])
+# Nesse layer adicionamos gates CNOT. Criamos estados emaranhados
+
+```
 
 Passando agora para uma abordagem mais prática, estudaremos 5 modelos de ansatz fornecidos pelo PennyLane: 
 
 #### qml.CVNeuralNetLayers
 
-Baseado em arquitetura do tipo rede neural, este layer contém gates que agem como interferometros, deslocadores e compressores [ref.XIV] - transformações lineares - e gates de Kerr que age de forma a aplicar uma "não-linearidade quântica".
+Baseado em arquitetura do tipo rede neural, este layer contém gates que agem como interferometros, deslocadores e compressores [ref.XIV] - transformações lineares - e gates de Kerr que agem de forma a aplicar uma "não-linearidade quântica".
 
 ![CVNeuralNetLayers](/layer_cvqnn.png)
 Fonte: [ref.IX]
@@ -99,30 +121,33 @@ fig, ax = qml.draw_mpl(circuit)()
 fig.show()
 ```
 
-O código fonte desta classe está no apêndice II.
-
 
 #### qml.RandomLayers
 
-Este layer é mais simples e age através de gates de rotação e CNOT aleatóriamente distribuidos pelo circuito. Para cada gate, existe um parametro de peso que podemos usar para. Abaixo está um exemplo:
+Este layer é mais simples e age através de gates de rotação e CNOT aleatóriamente distribuidos pelo circuito. Para cada gate, existe um parâmetro de peso que podemos usar para realizar backpropagration posteriormente. Abaixo está um exemplo de código utilizando esta função:
 
 ```
+n_wires = 5
+dev = qml.device('default.qubit', wires=n_wires)
+
+weights = np.array([[0.1, -2.1, 1.3, 0, 0]])
+
 @qml.qnode(dev)
 def circuit(weights, seed=None):
-    qml.RandomLayers(weights=weights, wires=range(4), seed=seed)
+    qml.RandomLayers(weights=weights, wires=range(5), seed=seed)
     return qml.expval(qml.PauliZ(0))
 
 print(qml.draw(circuit, expansion_strategy="device")(weights, seed=97))
 ```
 
-Este layer é extremamente útil por podermos testar combinações diferentes de layers para um mesmo problema. Entretanto, por ser aleatório, o ansatz frequentemente nos gera redundâncias como 2 CNOTs aplicados em sequência que é equivalente a um gate identidade. Abaixo está um dos circuitos gerados aleatóriamente.
+Este layer é extremamente útil porque podermos testar combinações diferentes de layers para um mesmo problema. Entretanto, por ser aleatório, o ansatz frequentemente nos gera redundâncias como 2 CNOTs aplicados em sequência que é equivalente a um gate identidade. Abaixo está um dos circuitos gerados aleatóriamente.
 
 ![RandomLayers](/layer_rnd.png)
 Fonte: [ref.X]
 
 #### qml.StronglyEntanglingLayers
 
-Este layer consiste, assim como qualquer um dos circuitos do RandomLayers, de gates de rotação e CNOT. A diferença é que este é fixo e inspirado em um artigo presente na referência [ref.XV]. Um exemplo de código é:
+Este layer consiste, assim como qualquer um dos circuitos do RandomLayers, de gates de rotação e CNOT. A diferença é que este é um layer fixo para uma certa quantidade de qubits e inspirado em um artigo presente na referência [ref.XV]. Um exemplo de código é:
 
 ```
 dev = qml.device('default.qubit', wires=4)
@@ -146,7 +171,7 @@ Fonte: [ref.X]
 #### qml.SimplifiedTwoDesign
 
 Este modelo consiste em combinações de gates de rotação RY e RZ controlados e também é proposto em um artigo presente em [ref.XII] pela sua importância no estudo de "barren plateaus" em otimização.
-O template começa com um bloco de rotações RY
+O template começa com um bloco de rotações RY e layers que combinam RY com RZ controlado.
 
 ![RandomLayers](/simplified_two_design.png)
 Fonte: [ref.XI]
@@ -163,19 +188,21 @@ def circuit(init_weights, weights):
     qml.SimplifiedTwoDesign(initial_layer_weights=init_weights, weights=weights, wires=range(n_wires))
     return [qml.expval(qml.PauliZ(wires=i)) for i in range(n_wires)]
 
+a = 0.
 init_weights = [pi, pi, pi]
-weights_layer1 = [[0., pi],
-                  [0., pi]]
-weights_layer2 = [[pi, 0.],
-                  [pi, 0.]]
+weights_layer1 = [[a, pi],
+                  [a, pi]]
+weights_layer2 = [[pi, a]
+                  [pi, a]]
 weights = [weights_layer1, weights_layer2]
+
+fig, ax = qml.draw_mpl(circuit)(init_weights,weights)
+fig.show()
 ```
-[CÓDIGO NÃO ESTÁ IMPRIMINDO O CIRCUITO]
 
 #### qml.BasicEntanglerLayers
 
 Este modelo consiste em rotações de apenas um parâmetro para cada qubit e gates CNOT. Na parte de CNOTs, é utilizado um ansatz onde todos os qubits precisam estar emaranhados. Abaixo um script exemplo deste layer com entrada o vetor $[\pi,\pi,\pi]$:
-
 
 ```
 import pennylane as qml
@@ -198,32 +225,11 @@ Abaixo o output:
 Fonte: [ref.XI]
 
 
-### Outros Circuitos Quânticos Variacionais (Qiskit)
+### Outros Modelos de Circuitos Quânticos Variacionais (Qiskit)
 
 Nesta etapa faremos um estudo baseado nas referências [ref.VIII], [...] e [...].
-Em [ref.VIII] temos um script utilizando o PennyLane para um circuito quântico variacional dado por:
 
-```
-def H_layer(nqubits):
-    for idx in range(nqubits):
-        qml.Hadamard(wires=idx)
-# Nesse layer adicionamos gates de Hadamard para usar as propriedades de superposição de nosso modelo.
-
-def RY_layer(w):
-    for idx, element in enumerate(w):
-        qml.RY(element, wires=idx)
-# Nesse layer adicionamos gates de rotação em torno do eixo Y.
-
-def entangling_layer(nqubits):
-    for i in range(0, nqubits - 1, 2):  # Loop over even indices: i=0,2,...N-2
-        qml.CNOT(wires=[i, i + 1])
-    for i in range(1, nqubits - 1, 2):  # Loop over odd indices:  i=1,3,...N-3
-        qml.CNOT(wires=[i, i + 1])
-# Nesse layer adicionamos gates CNOT. Criamos estados emaranhados
-
-```
-
-O Qiskit nos fornece, a saber dois circuitos quânticos variacionais principais para QML: ZZFeatureMap e o NLocal.
+O Qiskit nos fornece, a saber, dois circuitos quânticos variacionais principais para QML: ZZFeatureMap e o NLocal.
 
 O ZZFeatureMap pode ser visualizado usando:
 
@@ -232,9 +238,11 @@ from qiskit.circuit.library import ZZFeatureMap
 qc_zz = ZZFeatureMap(3, reps=1, insert_barriers=True)
 qc_zz.decompose().draw()
 ```
-Podemos notar que o circuito gerado por esse script tem uma camada inicial de gates de Hadamard e uma segunda camada contando com gates CNOT e gates de rotação simples X,Y e Z representados pelo gate P.
+
+Podemos notar que o circuito gerado por esse script tem uma camada inicial de gates de Hadamard e uma segunda camada contando com gates CNOT e gates de rotação simples X,Y e Z representados pelo gate P. Esta função também aparece em scripts fornecidos pela comunidade para Encoding (ou Embedding) de dados.
 
 Um exemplo de utilização do NLocal é:
+
 ```
 from qiskit.circuit.library import NLocal
 from qiskit import QuantumCircuit
@@ -262,18 +270,76 @@ qc_nlocal.decompose().draw()
 ```
 Que conta com um bloco inicial de gates de rotação simples e um segundo bloco de rotações controladas.
 
-[Testar os circuitos??]
-
 
 ## Métodos Kernel
 
-
 ## Testes de expressabilidade e capacidade de emaranhamento
 
+Prosseguindo nosso estudo, iremos calcular a capacidade de emaranhamento de qubits gerados por 5 circuitos aleatórios do layer do PennyLane qml.RandomLayers. Uma abordagem extremamente parecida mas um pouco mais simples pode ser encontrada em [ref.VI]
+
+Trabalharemos com 8 qubits. Inicialmente, criamos nosso circuito utilizando qml.RandomLayers e geramos uma matriz com pesos (parâmetros) aleatórios: 
+
+```
+import pennylane as qml
+from pennylane import numpy as np
+from random import randint, uniform
+from math import pi
+
+n_wires = 8
+n_layers = 2
+
+dev = qml.device('default.qubit', wires=n_wires)
+
+
+weights = np.array([[uniform(0,2*pi), 
+                     uniform(0,2*pi), 
+                     uniform(0,2*pi), 
+                     uniform(0,2*pi),
+                     uniform(0,2*pi), 
+                     uniform(0,2*pi), 
+                     uniform(0,2*pi), 
+                     uniform(0,2*pi),
+                     ]])
+
+print("Pesos iniciais: {}".format(weights))
+
+@qml.qnode(dev)
+def circuit(weights, seed=None):
+    qml.RandomLayers(weights=weights, wires=range(n_wires), seed=seed)
+    for i in range(n_layers):
+        weights = np.array([[uniform(0,2*pi), 
+            uniform(0,2*pi), 
+            uniform(0,2*pi), 
+            uniform(0,2*pi),
+            uniform(0,2*pi), 
+            uniform(0,2*pi), 
+            uniform(0,2*pi), 
+            uniform(0,2*pi),
+                     ]])
+        print("Pesos atualizados: {} em iteração: {}".format(weights,i+2))
+
+        qml.RandomLayers(weights=weights, wires=range(n_wires), seed=seed)
+
+    return qml.expval(qml.PauliZ(0))
+
+
+seed = randint(1,9999)
+print(qml.draw(circuit, expansion_strategy="device")(weights, seed))
+print()
+print("Circuito correspondente ao seed: {}".format(seed))
+
+```
+
+O intervalo dos valores da matriz de peso foi escolhida de forma a tentar abranger todas as possíveis rotações de $0$ até $2 \pi$. A escolha do intervalo para a seed foi aleatória: de $1$ até $9999$.
+Note que da forma que foi criado, o layer é inserido 3 vezes com pesos aleatórios. Entretanto, nada nos impede de, ao invés de parâmetros aleatórios, colocarmos pesos definidos por alguma certa função custo.
+
+Testaremos agora a entangling capability do estado gerado por este sistema.
 
 
 
 ## Conclusão
+
+
 
 ## Apêndice
 
@@ -340,263 +406,6 @@ if __name__ == "__main__":
 
 ```
 
-#### Apêndice II: Código fonte do CVNeuralNetLayers
-
-```
-# Copyright 2018-2021 Xanadu Quantum Technologies Inc.
-
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-
-#     http://www.apache.org/licenses/LICENSE-2.0
-
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
-r"""
-Contains the CVNeuralNetLayers template.
-"""
-# pylint: disable-msg=too-many-branches,too-many-arguments,protected-access,arguments-differ
-import pennylane as qml
-from pennylane.operation import Operation, AnyWires
-
-
-[docs]class CVNeuralNetLayers(Operation):
-    r"""A sequence of layers of a continuous-variable quantum neural network,
-    as specified in `Killoran et al. (2019) <https://doi.org/10.1103/PhysRevResearch.1.033063>`_.
-
-    The layer consists
-    of interferometers, displacement and squeezing gates mimicking the linear transformation of
-    a neural network in the x-basis of the quantum system, and uses a Kerr gate
-    to introduce a 'quantum' nonlinearity.
-
-    The layers act on the :math:`M` modes given in ``wires``,
-    and include interferometers of :math:`K=M(M-1)/2` beamsplitters. The different weight parameters
-    contain the weights for each layer. The number of layers :math:`L` is therefore derived
-    from the first dimension of ``weights``.
-
-    This example shows a 4-mode CVNeuralNet layer with squeezing gates :math:`S`, displacement gates :math:`D` and
-    Kerr gates :math:`K`. The two big blocks are interferometers of type
-    :mod:`pennylane.Interferometer`:
-
-    .. figure:: ../../_static/layer_cvqnn.png
-        :align: center
-        :width: 60%
-        :target: javascript:void(0);
-
-    .. note::
-       The CV neural network architecture includes :class:`~pennylane.ops.Kerr` operations.
-       Make sure to use a suitable device, such as the :code:`strawberryfields.fock`
-       device of the `PennyLane-SF <https://github.com/XanaduAI/pennylane-sf>`_ plugin.
-
-    Args:
-        theta_1 (tensor_like): shape :math:`(L, K)` tensor of transmittivity angles for first interferometer
-        phi_1 (tensor_like): shape :math:`(L, K)` tensor of phase angles for first interferometer
-        varphi_1 (tensor_like): shape :math:`(L, M)` tensor of rotation angles to apply after first interferometer
-        r (tensor_like): shape :math:`(L, M)` tensor of squeezing amounts for :class:`~pennylane.ops.Squeezing` operations
-        phi_r (tensor_like): shape :math:`(L, M)` tensor of squeezing angles for :class:`~pennylane.ops.Squeezing` operations
-        theta_2 (tensor_like): shape :math:`(L, K)` tensor of transmittivity angles for second interferometer
-        phi_2 (tensor_like): shape :math:`(L, K)` tensor of phase angles for second interferometer
-        varphi_2 (tensor_like): shape :math:`(L, M)` tensor of rotation angles to apply after second interferometer
-        a (tensor_like): shape :math:`(L, M)` tensor of displacement magnitudes for :class:`~pennylane.ops.Displacement` operations
-        phi_a (tensor_like): shape :math:`(L, M)` tensor of displacement angles for :class:`~pennylane.ops.Displacement` operations
-        k (tensor_like): shape :math:`(L, M)` tensor of kerr parameters for :class:`~pennylane.ops.Kerr` operations
-        wires (Iterable): wires that the template acts on
-
-    .. details::
-        :title: Usage Details
-
-        **Parameter shapes**
-
-        A list of shapes for the 11 input parameter tensors can be computed by the static method
-        :meth:`~.CVNeuralNetLayers.shape` and used when creating randomly
-        initialised weights:
-
-        .. code-block:: python
-
-            shapes = CVNeuralNetLayers.shape(n_layers=2, n_wires=2)
-            weights = [np.random.random(shape) for shape in shapes]
-
-            def circuit():
-              CVNeuralNetLayers(*weights, wires=[0, 1])
-              return qml.expval(qml.X(0))
-
-    """
-
-    num_wires = AnyWires
-    grad_method = None
-
-    def __init__(
-        self,
-        theta_1,
-        phi_1,
-        varphi_1,
-        r,
-        phi_r,
-        theta_2,
-        phi_2,
-        varphi_2,
-        a,
-        phi_a,
-        k,
-        wires,
-        do_queue=True,
-        id=None,
-    ):
-        n_wires = len(wires)
-        # n_if -> theta and phi shape for Interferometer
-        n_if = n_wires * (n_wires - 1) // 2
-
-        # check that first dimension is the same
-        weights_list = [theta_1, phi_1, varphi_1, r, phi_r, theta_2, phi_2, varphi_2, a, phi_a, k]
-        shapes = [qml.math.shape(w) for w in weights_list]
-        first_dims = [s[0] for s in shapes]
-        if len(set(first_dims)) > 1:
-            raise ValueError(
-                f"The first dimension of all parameters needs to be the same, got {first_dims}"
-            )
-
-        # check second dimensions
-        second_dims = [s[1] for s in shapes]
-        expected = [n_if] * 2 + [n_wires] * 3 + [n_if] * 2 + [n_wires] * 4
-        if not all(e == d for e, d in zip(expected, second_dims)):
-            raise ValueError("Got unexpected shape for one or more parameters.")
-
-        self.n_layers = shapes[0][0]
-
-        super().__init__(
-            theta_1,
-            phi_1,
-            varphi_1,
-            r,
-            phi_r,
-            theta_2,
-            phi_2,
-            varphi_2,
-            a,
-            phi_a,
-            k,
-            wires=wires,
-            do_queue=do_queue,
-            id=id,
-        )
-
-    @property
-    def num_params(self):
-        return 11
-
-[docs]    @staticmethod
-    def compute_decomposition(
-        theta_1, phi_1, varphi_1, r, phi_r, theta_2, phi_2, varphi_2, a, phi_a, k, wires
-    ):  # pylint: disable=arguments-differ
-        r"""Representation of the operator as a product of other operators.
-
-        .. math:: O = O_1 O_2 \dots O_n.
-
-
-
-        .. seealso:: :meth:`~.CVNeuralNetLayers.decomposition`.
-
-        Args:
-
-            theta_1 (tensor_like): shape :math:`(L, K)` tensor of transmittivity angles for first interferometer
-            phi_1 (tensor_like): shape :math:`(L, K)` tensor of phase angles for first interferometer
-            varphi_1 (tensor_like): shape :math:`(L, M)` tensor of rotation angles to apply after first interferometer
-            r (tensor_like): shape :math:`(L, M)` tensor of squeezing amounts for :class:`~pennylane.ops.Squeezing` operations
-            phi_r (tensor_like): shape :math:`(L, M)` tensor of squeezing angles for :class:`~pennylane.ops.Squeezing` operations
-            theta_2 (tensor_like): shape :math:`(L, K)` tensor of transmittivity angles for second interferometer
-            phi_2 (tensor_like): shape :math:`(L, K)` tensor of phase angles for second interferometer
-            varphi_2 (tensor_like): shape :math:`(L, M)` tensor of rotation angles to apply after second interferometer
-            a (tensor_like): shape :math:`(L, M)` tensor of displacement magnitudes for :class:`~pennylane.ops.Displacement` operations
-            phi_a (tensor_like): shape :math:`(L, M)` tensor of displacement angles for :class:`~pennylane.ops.Displacement` operations
-            k (tensor_like): shape :math:`(L, M)` tensor of kerr parameters for :class:`~pennylane.ops.Kerr` operations
-            wires (Any or Iterable[Any]): wires that the operator acts on
-
-        Returns:
-            list[.Operator]: decomposition of the operator
-
-        **Example**
-
-        >>> theta_1 = torch.tensor([[0.4]])
-        >>> phi_1 = torch.tensor([[-0.3]])
-        >>> varphi_1 = = torch.tensor([[1.7, 0.1]])
-        >>> r = torch.tensor([[-1., -0.2]])
-        >>> phi_r = torch.tensor([[0.2, -0.2]])
-        >>> theta_2 = torch.tensor([[1.4]])
-        >>> phi_2 = torch.tensor([[-0.4]])
-        >>> varphi_2 = torch.tensor([[0.1, 0.2]])
-        >>> a = torch.tensor([[0.1, 0.2]])
-        >>> phi_a = torch.tensor([[-1.1, 0.2]])
-        >>> k = torch.tensor([[0.1, 0.2]])
-        >>> qml.CVNeuralNetLayers.compute_decomposition(theta_1, phi_1, varphi_1, r, phi_r, theta_2,
-        ...                                             phi_2, varphi_2, a, phi_a, k, wires=["a", "b"])
-        [Interferometer(tensor([0.4000]), tensor([-0.3000]), tensor([1.7000, 0.1000]), wires=['a', 'b']),
-        Squeezing(tensor(-1.), tensor(0.2000), wires=['a']),
-        Squeezing(tensor(-0.2000), tensor(-0.2000), wires=['b']),
-        Interferometer(tensor([1.4000]), tensor([-0.4000]), tensor([0.1000, 0.2000]), wires=['a', 'b']),
-        Displacement(tensor(0.1000), tensor(-1.1000), wires=['a']),
-        Displacement(tensor(0.2000), tensor(0.2000), wires=['b']),
-        Kerr(tensor(0.1000), wires=['a']),
-        Kerr(tensor(0.2000), wires=['b'])]
-        """
-        op_list = []
-        n_layers = qml.math.shape(theta_1)[0]
-        for m in range(n_layers):
-            op_list.append(
-                qml.Interferometer(
-                    theta=theta_1[m],
-                    phi=phi_1[m],
-                    varphi=varphi_1[m],
-                    wires=wires,
-                )
-            )
-
-            for i in range(len(wires)):  # pylint:disable=consider-using-enumerate
-                op_list.append(qml.Squeezing(r[m, i], phi_r[m, i], wires=wires[i]))
-
-            op_list.append(
-                qml.Interferometer(
-                    theta=theta_2[m],
-                    phi=phi_2[m],
-                    varphi=varphi_2[m],
-                    wires=wires,
-                )
-            )
-
-            for i in range(len(wires)):  # pylint: disable=consider-using-enumerate
-                op_list.append(qml.Displacement(a[m, i], phi_a[m, i], wires=wires[i]))
-
-            for i in range(len(wires)):  # pylint:disable=consider-using-enumerate
-                op_list.append(qml.Kerr(k[m, i], wires=wires[i]))
-
-        return op_list
-
-[docs]    @staticmethod
-    def shape(n_layers, n_wires):
-        r"""Returns a list of shapes for the 11 parameter tensors.
-
-        Args:
-            n_layers (int): number of layers
-            n_wires (int): number of wires
-
-        Returns:
-            list[tuple[int]]: list of shapes
-        """
-        # n_if -> theta and phi shape for Interferometer
-        n_if = n_wires * (n_wires - 1) // 2
-
-        shapes = (
-            [(n_layers, n_if)] * 2
-            + [(n_layers, n_wires)] * 3
-            + [(n_layers, n_if)] * 2
-            + [(n_layers, n_wires)] * 4
-        )
-
-        return shapes
-```
 
 ### Referências
 
