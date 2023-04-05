@@ -8,20 +8,19 @@ usemathjax: true
 excerpt_separator: <!--more-->
 ---
 
-Continuando nosso estudo sobre QML, agora passaremos a estudar modelos de circuitos quânticos variacionais. Nesta etapa, conforme é feito em Machine Learning, teremos que ramificar essa etapa em aprendizado supervisionado, não supervisionado, semi supervisionado e aprendizado por reforço. 
+Continuando nosso estudo sobre QML, agora passaremos a estudar modelos de circuitos quânticos variacionais. Nesta etapa, conforme é feito em Machine Learning, teremos que ramificar em aprendizado supervisionado, não supervisionado, semi supervisionado e aprendizado por reforço. 
 O foco deste artigo será apresentar metódos e comparações de aprendizado de máquina quântica supervisionada para a era NISQ utilizando, conforme o artigo QML 01, a classificação CQ (Classical data with Quantum algorithms). Para isso, usaremos as referências que contam com comparações entre modelos de circuitos quânticos variacionais utilizando como métrica os conceitos de expressabilidade e capacidade de emaranhamento do estado gerado pelo circuito. Não obstante, iremos apresentar e detalhar scripts do PennyLane que fornecem exemplos de como aplicar esta etapa, e subsequentes, de QML. 
-Por fim, tentaremos abordar o assunto focando em classificação e regressão (em aprendizado supervisionado) em Quantum Machine Learning.
 
 <!--more-->
 
 ## Introdução
 
-Iniciaremos nosso artigo com o método mais simples possível de machine learning: aprendizado de máquina com o método de classificação. Em quantum machine learning, este processo pode ser feito por gates em um circuito que são responsáveis por alterar características dos qubits como amplitude ou até na base destes. Iremos, primeiro, definir alguns conceitos seguindo o artigo [ref.I] para que possamos entender os parâmetros úteis na comparação entre circuitos quânticos variacionais. Há de se pontuar que como este tipo de estudo é relativamente recente, existem outras nomenclaturas para este processo na literatura como "parametrized quantum circuit", "ansatz" ou ainda "variational circuits". O importante para nós é termos em mente o que o processo faz.
+Iniciaremos nosso artigo com o método mais simples possível de machine learning: aprendizado supervisionado de máquina com o método de classificação. Em quantum machine learning, este processo pode ser feito por gates em um circuito que são responsáveis por alterar características dos qubits como amplitude ou até na base destes. Iremos, primeiro, definir alguns conceitos seguindo o artigo [ref.I] para que possamos entender os parâmetros úteis na comparação entre circuitos quânticos variacionais. Há de se pontuar que como este tipo de estudo é relativamente recente, existem outras nomenclaturas para este processo na literatura como "parametrized quantum circuit", "ansatz" ou ainda "variational circuits". O importante para nós é termos em mente o que o processo faz.
 
 ![circuitA](/variational-quantum-classifier.png)
 Fonte: Qiskit - https://www.youtube.com/watch?v=-sxlXNz7ZxU&list=PLOFEBzvs-VvqJwybFxkTiDzhf5E11p8BI&index=10
 
-Comecemos com o conceito de expressabilidade de um circuito quântico. Este indicativo, coletado pela referência [ref.I] trata-se de quantos estados em nosso espaço de Hilbert (podendo ser a Bloch Sphere para um qubit e.g.) podemos alcançar com nosso circuito variacional. Seguindo a referência [ref.V], temos como exemplo dois circuitos onde no primeiro aplicamos apenas Hadamard e um gate RZ no nosso qubit. Comparando com o segundo circuito, que conta com uma Hadamard, um RZ e um RY podemos perceber que nossa intuição está correta: o segundo circuito consegue alcançar mais estados e portanto possui uma gama mais vasta de opções de estado para treinamento.
+Comecemos com o conceito de expressabilidade de um circuito quântico. Esta métrica, coletado da referência [ref.I] trata-se de quantos estados em nosso espaço de Hilbert (podendo ser a Bloch Sphere para um qubit e.g.) podemos alcançar com nosso circuito variacional. Seguindo a referência [ref.V], temos como exemplo dois circuitos onde no primeiro aplicamos apenas Hadamard e um gate RZ no nosso qubit. Comparando com o segundo circuito, que conta com uma Hadamard, um RZ e um RY podemos perceber que nossa intuição está correta: o segundo circuito consegue alcançar mais estados e portanto possui uma gama mais vasta de opções de estado para treinamento.
 
 ![circuitA](/circuitA.png)
 Fonte: Qiskit - Introduction to QML
@@ -91,6 +90,8 @@ def entangling_layer(nqubits):
 ```
 
 Passando agora para uma abordagem mais prática, estudaremos 5 modelos de ansatz fornecidos pelo PennyLane: 
+
+### Modelos de Circuitos Quânticos Variacionais PennyLane
 
 #### qml.CVNeuralNetLayers
 
@@ -225,21 +226,11 @@ Abaixo o output:
 Fonte: [ref.XI]
 
 
-### Outros Modelos de Circuitos Quânticos Variacionais (Qiskit)
+### Modelos de Circuitos Quânticos Variacionais Qiskit
 
-Nesta etapa faremos um estudo baseado nas referências [ref.VIII], [...] e [...].
+Nesta etapa faremos um estudo baseado nas referências [ref.VIII], [...] e [...]. O Qiskit nos fornece, a saber, sete modelos de circuitos quânticos variacionais principais para QML: NLocal, TwoLocal, PauliTwoDesign, RealAmplitudes, EfficientSU2, ExcitationPreserving e QAOAAnsatz.
 
-O Qiskit nos fornece, a saber, dois circuitos quânticos variacionais principais para QML: ZZFeatureMap e o NLocal.
-
-O ZZFeatureMap pode ser visualizado usando:
-
-```
-from qiskit.circuit.library import ZZFeatureMap
-qc_zz = ZZFeatureMap(3, reps=1, insert_barriers=True)
-qc_zz.decompose().draw()
-```
-
-Podemos notar que o circuito gerado por esse script tem uma camada inicial de gates de Hadamard e uma segunda camada contando com gates CNOT e gates de rotação simples X,Y e Z representados pelo gate P. Esta função também aparece em scripts fornecidos pela comunidade para Encoding (ou Embedding) de dados.
+#### NLocal
 
 Um exemplo de utilização do NLocal é:
 
@@ -270,80 +261,609 @@ qc_nlocal.decompose().draw()
 ```
 Que conta com um bloco inicial de gates de rotação simples e um segundo bloco de rotações controladas.
 
+#### TwoLocal
 
-## Métodos Kernel
+Este modelo de VQC consiste de blocos alternados de rotação e emaranhamento. Os blocos de rotação são compostos por gates de rotação de qubits iguais (no sentido do eixo) aplicados em todos os qubits. O bloco de emaranhamento usa portas de dois qubits para emaranhar os qubits de acordo com uma estratégia escolhida pelo usuário. Estes gates podem ser escolhidos pelo programador e portanto este modelo é altamente modificável.
+O conjunto de argumentos deste modelo pode ser consultado em [ref.XVI]. Um exemplo de visualização deste é:
+
+```
+from qiskit.circuit.library import TwoLocal
+
+circuit = TwoLocal(3, 'ry', 'cx', 'linear', reps=2, insert_barriers=True)
+circuit.decompose().draw('mpl')
+```
+
+Que tem como output o circuito exemplo:
+
+![TwoLocal](/twolocal.png)
+Fonte: [Autor]
+
+Este é apenas um exemplo de circuito gerado pelo TwoLocal. Existem várias combinações possíveis de gates para este modelo. Neste caso estamos repetindo o mesmo modelo 2 vezes em reps=2 e explicitamos o uso dos gates CNOT e RY.
+
+#### PauliTwoDesign
+
+Este modelo aparece frequentemente na literatura de QML conforme [ref.XVII]. Assim como o TwoLocal, este modelo consiste de camadas de rotações e emaranhamento. As rotações são feitas em torno de eixos aleatórios e o emaranhamento é realizado por gates CZ emparelhadas. Um exemplo de código para visualização do PauliTwoDesign é:
+
+```
+from qiskit.circuit.library import PauliTwoDesign
+
+circuit = PauliTwoDesign(4, reps=2, seed=5, insert_barriers=True)
+circuit.decompose().draw('mpl')
+```
+
+O output:
+![PauliTwoDesign](/PauliTwoDesign.png)
+Fonte: [Autor]
+
+#### RealAmplitudes
+
+Este modelo, além de utilizado como VQC, tem várias aplicações em química. O RealAmplitudes consiste também de camadas alternadas de rotações e emaranhamento. Como o TwoLocal, podemos escolher o padrão dos blocos mas temos também a opção de selecionar um conjunto predefinido. Diferente dos 3 modelos acima, este pode não ter blocos finais de rotações. Um exemplo de visualização do RealAmplitudes é:
+
+```
+from qiskit.circuit.library import RealAmplitudes
+
+circuit = RealAmplitudes(3, entanglement='full', reps=2) 
+circuit.decompose().draw('mpl')
+```
+
+Output:
+![RealAmplitudes](/RealAmplitudes.png)
+Fonte: [Autor]
+
+Este modelo tem esse nome porque os estados quânticos resultados terão apenas amplitudes reais (não complexas). 
+
+#### EfficientSU2
+
+Este modelo tem nome alternativo Hardware Efficient SU(2) e este consiste também de camadas de rotação e emaranhamento. O modelo tem esse nome porque tem um padrão heurístico que pode ser usado para preparar funções de onda de teste para VQA ou circuitos de classificação para QML. Um script para visualização deste é:
+
+```
+from qiskit.circuit.library import EfficientSU2
+
+circuit = EfficientSU2(3, reps=2)
+circuit.decompose().draw('mpl')
+```
+
+Cujo output é:
+![EfficientSU2](/EfficientSU2.png)
+Fonte: [Autor]
+
+Assim como os gates de Pauli, este modelo tem gates que pertencem ao conjunto SU(2), grupo unitário especial de grau 2, que consiste de matrizes unitárias de determinante 1.
+
+#### ExcitationPreserving
+
+```
+from qiskit.circuit.library import ExcitationPreserving
+
+circuit = ExcitationPreserving(3, reps=1, insert_barriers=True, entanglement='linear')
+circuit.decompose().draw('mpl')
+```
+
+O output é:
+![ExcitationPreserving](/ExcitationPreserving.png)
+Fonte: [Autor]
+
+#### QAOAAnsatz
+
+```
+from qiskit.circuit.quantumcircuit import QuantumCircuit
+from qiskit.circuit.library.n_local.qaoa_ansatz import QAOAAnsatz
+from qiskit.circuit.library import HGate, RXGate, YGate, RYGate, RZGate
+
+mixer = QuantumCircuit(2)
+cost_function = QuantumCircuit(2)
+ckt = QAOAAnsatz(cost_operator=cost_function, reps=1)
+
+circuit.decompose().decompose().draw('mpl')
+```
+
+Cujo output é:
+![QAOAAnsatz](/QAOAAnsatz.png)
+Fonte: [Autor]
+
+
+
+
+
+De forma complementar, temos o ZZFeatureMap que é geralmente utilizado em data encoding:
+
+```
+from qiskit.circuit.library import ZZFeatureMap
+qc_zz = ZZFeatureMap(3, reps=1, insert_barriers=True)
+qc_zz.decompose().draw()
+```
+
+Podemos notar que o circuito gerado por esse script tem uma camada inicial de gates de Hadamard e uma segunda camada contando com gates CNOT e gates de rotação simples X,Y e Z representados pelo gate P. Esta função também aparece em scripts fornecidos pela comunidade para Encoding (ou Embedding) de dados.
 
 ## Testes de expressabilidade e capacidade de emaranhamento
 
-Prosseguindo nosso estudo, iremos calcular a capacidade de emaranhamento de qubits gerados por 5 circuitos aleatórios do layer do PennyLane qml.RandomLayers. Uma abordagem extremamente parecida mas um pouco mais simples pode ser encontrada em [ref.VI]
+### Modelos do Pennylane
 
-Trabalharemos com 8 qubits. Inicialmente, criamos nosso circuito utilizando qml.RandomLayers e geramos uma matriz com pesos (parâmetros) aleatórios: 
+#### RandomLayers
+
+Prosseguindo nosso estudo, iremos calcular a capacidade de emaranhamento de qubits gerados por 5 circuitos aleatórios do layer do PennyLane qml.RandomLayers. Uma abordagem parecida pode ser encontrada em [ref.VI].
+
+Importemos os módulos necessários e alguns adicionais:
 
 ```
 import pennylane as qml
 from pennylane import numpy as np
+import pandas as pd
 from random import randint, uniform
 from math import pi
+import qutip
+```
 
-n_wires = 8
-n_layers = 2
+Trabalharemos, sem perda de generalidade, com 2 qubits e 2 layers para cada circuito fornecido pelo RandomLayers. Inicialmente, geramos uma matriz com pesos (parâmetros) aleatórios. Criamos um vetor de matrizes porque o parametro de pesos desta função aceita matrizes como entrada.
+Usaremos uma função chamada function para analisar algumas propriedades do nosso sistema.
 
-dev = qml.device('default.qubit', wires=n_wires)
+```
+def function():
+
+    n_layers = 2
+    n_wires = 2
 
 
-weights = np.array([[uniform(0,2*pi), 
-                     uniform(0,2*pi), 
-                     uniform(0,2*pi), 
-                     uniform(0,2*pi),
-                     uniform(0,2*pi), 
-                     uniform(0,2*pi), 
-                     uniform(0,2*pi), 
-                     uniform(0,2*pi),
-                     ]])
-
-print("Pesos iniciais: {}".format(weights))
-
-@qml.qnode(dev)
-def circuit(weights, seed=None):
-    qml.RandomLayers(weights=weights, wires=range(n_wires), seed=seed)
+    weights = []
     for i in range(n_layers):
-        weights = np.array([[uniform(0,2*pi), 
-            uniform(0,2*pi), 
-            uniform(0,2*pi), 
-            uniform(0,2*pi),
-            uniform(0,2*pi), 
-            uniform(0,2*pi), 
-            uniform(0,2*pi), 
-            uniform(0,2*pi),
-                     ]])
-        print("Pesos atualizados: {} em iteração: {}".format(weights,i+2))
+        row = []
+        for j in range(n_wires):
+            column = []
+            for k in range(n_wires):   #matriz quadrada
+                column.append(uniform(0,2*pi))
+            row.append(column)
+        weights.append(row)
 
-        qml.RandomLayers(weights=weights, wires=range(n_wires), seed=seed)
-
-    return qml.expval(qml.PauliZ(0))
-
-
-seed = randint(1,9999)
-print(qml.draw(circuit, expansion_strategy="device")(weights, seed))
-print()
-print("Circuito correspondente ao seed: {}".format(seed))
+    for i in range(n_layers):
+        print("Layer: {}".format(i))
+        print("Matriz de pesos: {}".format(weights[i]))
+        print("\n")
 
 ```
 
-O intervalo dos valores da matriz de peso foi escolhida de forma a tentar abranger todas as possíveis rotações de $0$ até $2 \pi$. A escolha do intervalo para a seed foi aleatória: de $1$ até $9999$.
-Note que da forma que foi criado, o layer é inserido 3 vezes com pesos aleatórios. Entretanto, nada nos impede de, ao invés de parâmetros aleatórios, colocarmos pesos definidos por alguma certa função custo.
+A seguir, escolhemos um valor aleatório entre 1 e $9999$ para criar o ansatz fornecido pelo RandomLayers. Criamos nosso circuito e duas repetições deste:
 
-Testaremos agora a entangling capability do estado gerado por este sistema.
+```
+    seed = randint(1, 9999)
 
+
+    dev = qml.device('default.qubit', wires=n_wires)
+
+    @qml.qnode(dev)
+    def circuit(weights, seed=None):
+        for i in range(n_layers):
+            qml.RandomLayers(weights=weights[i], wires=range(n_wires), seed=seed)
+        return qml.state()
+```
+
+Printamos então nosso sistema utilizando o simulador do PennyLane
+
+```
+    print(qml.draw(circuit, expansion_strategy="device")(weights, seed))
+    print("\nCircuito correspondente ao seed: {}".format(seed))
+
+    ket = circuit(weights, seed)
+    print("\nEstado resultado do circuito: ", ket)
+```
+
+Para finalizar nossa função principal, calculamos o grau de emaranhamento do estado gerado pelo circuito. Para tanto, usamos o script da referência [ref.VI]:
+
+```
+    def compute_Q_ptrace(ket, N):
+
+        ket = qutip.Qobj(ket, dims=[[2]*(N), [1]*(N)]).unit()    #Transforma nosso KET em uma matriz
+        #print('KET=  ', ket)   Podemos verificar se a conversão esta correta
+        entanglement_sum = 0
+        for k in range(N):
+            #print('value of n', k, 'PTrace: ',ket.ptrace([k])**2 )
+            rho_k_sq = ket.ptrace([k])**2
+            entanglement_sum += rho_k_sq.tr()  
+   
+        Q = 2*(1 - (1/N)*entanglement_sum)
+        return Q
+
+    Q = compute_Q_ptrace(ket, n_wires)
+    print("\nCircuito gerando estado com grau de emaranhamento: ", Q)
+    print("\n\n==========================================================================\n\n")
+
+    return Q
+```
+
+Dessa forma, temos um script que nos mostra o grau de emaranhamento de estados gerados por circuitos aleatórios do RandomLayers. Com o objetivo de comparar os resultados, podemos chamar nossa função principal dessa forma:
+
+```
+iteracoes = 5
+
+k=[]
+for i in range(iteracoes):
+    print("=============")
+    print("= Ansatz: {} =".format(i))
+    print("=============\n")
+    k.append(function())
+
+for i in range(iteracoes):
+    print("\n Grau de Emaranhamento {} do ansatz {}".format(k[i],i), end='')
+
+
+print("\n\n Análise usando Pandas: \n")
+dicionario = {"Grau de Emaranhamento": k}
+df = pd.DataFrame(dicionario)
+
+df.describe()
+```
+
+Note que da forma que foi criado, cada layer do RandomLayers é inserido 2 vezes com pesos aleatórios. Entretanto, nada nos impede de, ao invés de parâmetros aleatórios, colocarmos pesos definidos por alguma certa função custo posteriormente.
+Executando este código para um número grande de iterações, digamos, 50 vezes e deixando o sistema com apenas 2 qubits, obtemos como resposta uma média baixa (e.g. 0.01) de grau de emaranhamento. Aumentando a quantidade de qubits, aumentamos essa média conforme esperado visto que teremos mais opções de estados emaranhados.
+
+
+#### CVNeuralNetLayers
+
+Infelizmente ainda não conseguimos criar uma rotina de testes para este layer o qual funciona com arquitetura fotônica. Tentamos utilizar dois dispositivos do PennyLane: 'default.qubit' e 'lightning.qubit' e ambos apresentaram erros de compilação com mensagem:
+
+```
+Gate Beamsplitter not supported on device default.qubit.autograd
+```
+
+Por ser baseado em fotônica, procuramos na documentação dos dispositivos do plugin do StrawBerry Fields mas, até o momento, nenhum destes contém os métodos qml.state e qml.show. Desta forma, a saber, não existe maneira de retornar um estado de nossa função principal e portanto não podemos rodar a função que calcula o grau de emaranhamento do estado gerado por este layer.
+
+#### StronglyEntanglingLayers
+
+Este layer, diferente do CVNeuralNetLayers e similar ao RandomLayers, aceita o uso do dispositivo 'default.qubit'. A rotina criada para testar este layer é identica a rotina do RandomLayers:
+
+Importamos as bibliotecas:
+
+```
+import pennylane as qml
+from pennylane import numpy as np
+import pandas as pd
+import qutip
+```
+
+Criamos a função principal que será responsável por instanciar o dispositivo e criar o circuito quântico. Nesta etapa, diferente do que fizemos em RandomLayers, podemos utilizar o método "shape" e a biblioteca numpy para criar aleatóriamente um vetor de matrizes que corresponderá aos pesos do nosso VQC. Neste trecho também imprimimos o vetor de matrizes, o circuito correspondente e o estado final do circuito e por fim calculamos o grau de emaranhamento do estado resultado pelo circuito.
+
+```
+def function():
+
+    n_layers = 2
+    n_wires=4
+
+    dev = qml.device('default.qubit', wires=4)
+
+    @qml.qnode(dev)
+    def circuit(parameters):
+        qml.StronglyEntanglingLayers(weights=parameters, wires=range(4))
+        return qml.state()
+
+    shape = qml.StronglyEntanglingLayers.shape(n_layers, n_wires)   #Formato do vetor de matrizes
+    weights = np.random.random(size=shape)
+
+    print("\nVetor de matrizes peso: \n", weights)
+    print("\n")
+
+    print(qml.draw(circuit, expansion_strategy="device")(weights))
+
+
+
+    ket = circuit(weights)
+    print("\nEstado resultado do circuito: ", ket)
+
+    def compute_Q_ptrace(ket, N):
+
+        ket = qutip.Qobj(ket, dims=[[2]*(N), [1]*(N)]).unit()
+        entanglement_sum = 0
+        for k in range(N):
+            rho_k_sq = ket.ptrace([k])**2
+            entanglement_sum += rho_k_sq.tr()  
+   
+        Q = 2*(1 - (1/N)*entanglement_sum)
+        return Q
+
+    Q = compute_Q_ptrace(ket, n_wires)
+    print("\nCircuito gerando estado com grau de emaranhamento: ", Q)
+    print("\n\n==========================================================================\n\n")
+
+
+    return Q
+```
+
+Para executar a função principal, de forma identica ao RandomLayers, chamamos a função diversas vezes e armazenamos o grau de emaranhamento de cada modelo através do vetor k. Imprimimos este último e usamos o Pandas para retornar estatísticas úteis desde vetor k.
+
+```
+iteracoes = 50
+
+k=[]
+for i in range(iteracoes):
+    print("=============")
+    print("= Modelo: {} =".format(i))
+    print("=============")
+    k.append(function())
+
+for i in range(iteracoes):
+    print("\n Grau de Emaranhamento {} do ansatz {}".format(k[i],i), end='')
+
+
+dicionario = {"Grau de Emaranhamento": k}
+df = pd.DataFrame(dicionario)
+
+df.describe()
+```
+
+
+#### BasicEntanglerLayers
+
+Similar ao RandomLayers e o StronglyEntanglingLayers, o BasicEntanglerLayers também pode ser executado no dispositivo default.qubit do PennyLane. Dessa forma, podemos replicar todo nosso código alterando apenas o layer. Assim, uma rotina para calcular o grau de emaranhamento de um estado gerado por este circuito é:
+
+```
+import pennylane as qml
+import pandas as pd
+import qutip
+from pennylane import numpy as np
+
+
+def function():
+
+    n_wires = 4
+    n_layers = 2
+
+    shape = qml.BasicEntanglerLayers.shape(n_layers, n_wires)
+    weights = np.random.random(size=shape)
+
+    print("\nVetor de matrizes de peso: ", weights)
+
+
+    dev = qml.device('default.qubit', wires=n_wires)
+
+    @qml.qnode(dev)
+    def circuit(weights):
+        qml.BasicEntanglerLayers(weights=weights, wires=range(n_wires))
+        return qml.state()
+
+    print("\n")
+    print(qml.draw(circuit, expansion_strategy="device")(weights))
+
+    ket = circuit(weights)
+    print("\nEstado resultado do circuito: ", ket)
+
+    def compute_Q_ptrace(ket, N):
+
+        ket = qutip.Qobj(ket, dims=[[2]*(N), [1]*(N)]).unit()
+        entanglement_sum = 0
+        for k in range(N):
+            rho_k_sq = ket.ptrace([k])**2
+            entanglement_sum += rho_k_sq.tr()  
+   
+        Q = 2*(1 - (1/N)*entanglement_sum)
+        return Q
+
+    Q = compute_Q_ptrace(ket, n_wires)
+    print("\nCircuito gerando estado com grau de emaranhamento: ", Q)
+    print("\n\n==========================================================================\n\n")
+
+    return Q
+
+iteracoes = 4
+
+k=[]
+for i in range(iteracoes):
+    print("=============")
+    print("= Modelo: {} =".format(i))
+    print("=============")
+    k.append(function())
+
+for i in range(iteracoes):
+    print("\n Grau de Emaranhamento {} do ansatz {}".format(k[i],i), end='')
+
+
+dicionario = {"Grau de Emaranhamento": k}
+df = pd.DataFrame(dicionario)
+
+df.describe()
+```
+
+#### SimplifiedTwoDesign
+
+O layer SimplifiedTwoDesign também nos fornece o dispositivo 'default.qubit' podemos portanto usar os métodos qml.state() e qml.show(). Dessa forma, novamente, podemos repetir o escopo do código do RandomLayer. Aqui, entretanto, também precisamos caracterizar explicitamente nosso vetor de matrizes de pesos (parâmetros). Uma rotina que utiliza esse layer e nos retorna o grau de emaranhamento de alguns circuitos (variamos apenas as matrizes de pesos) é:
+
+```
+import pennylane as qml
+import pandas as pd
+import qutip
+from pennylane import numpy as np
+from random import uniform
+from math import pi
+    
+def function():
+  n_wires = 4
+  n_layers = 2
+
+  init_weights = [uniform(0,2*pi), uniform(0,2*pi), uniform(0,2*pi), uniform(0,2*pi)]
+
+  weights_layer1 = [[uniform(0,2*pi), uniform(0,2*pi)],
+                    [uniform(0,2*pi), uniform(0,2*pi)],
+                    [uniform(0,2*pi), uniform(0,2*pi)]]
+  weights_layer2 = [[uniform(0,2*pi), uniform(0,2*pi)],
+                    [uniform(0,2*pi), uniform(0,2*pi)],
+                    [uniform(0,2*pi), uniform(0,2*pi)]]
+  weights_layer3 = [[uniform(0,2*pi), uniform(0,2*pi)],
+                    [uniform(0,2*pi), uniform(0,2*pi)],
+                    [uniform(0,2*pi), uniform(0,2*pi)]]   
+
+  weights = [weights_layer1, weights_layer2, weights_layer3]
+
+  print("\nVetor de matrizes de peso:", weights)
+
+  dev = qml.device('default.qubit', wires=n_wires)
+
+  @qml.qnode(dev)
+  def circuit(init_weights, weights):
+    qml.SimplifiedTwoDesign(initial_layer_weights=init_weights, weights=weights, wires=range(n_wires))
+    return qml.state()
+    
+
+  print("\n")
+  print(qml.draw(circuit, expansion_strategy="device")(init_weights, weights))
+
+  ket = circuit(init_weights, weights)
+  print("\nEstado resultado do circuito: ", ket)
+
+  def compute_Q_ptrace(ket, N):
+    ket = qutip.Qobj(ket, dims=[[2]*(N), [1]*(N)]).unit()
+    entanglement_sum = 0
+    for k in range(N):
+      rho_k_sq = ket.ptrace([k])**2
+      entanglement_sum += rho_k_sq.tr()  
+   
+    Q = 2*(1 - (1/N)*entanglement_sum)
+    return Q
+
+  Q = compute_Q_ptrace(ket, n_wires)
+  print("\nCircuito gerando estado com grau de emaranhamento: ", Q)
+  print("\n\n==========================================================================\n\n")
+
+  return Q
+
+iteracoes = 4
+
+k=[]
+for i in range(iteracoes):
+    print("=============")
+    print("= Modelo: {} =".format(i))
+    print("=============\n")
+    k.append(function())
+
+for i in range(iteracoes):
+    print("\n Grau de Emaranhamento {} do ansatz {}".format(k[i],i), end='')
+
+dicionario = {"Grau de Emaranhamento": k}
+df = pd.DataFrame(dicionario)
+
+
+df.describe()
+```
+
+Entretanto, por algum motivo, esta rotina não compila corretamente no VSCode. Recomendamos o uso do Google Colabs para testes.
+
+
+### Modelos do Qiskit
+
+#### NLocal
+
+Para estudar este layer do Qiskit repetiremos, estruturalmente, a mesma rotina dos layers fornecidos pelo PennyLane. Inicialmente importamos nossas bibliotecas:
+
+```
+from qiskit.circuit.library import NLocal
+from qiskit import QuantumCircuit, Aer, execute
+from qiskit.circuit import ParameterVector
+
+from random import uniform
+from math import pi
+from pennylane import numpy as np
+import pandas as pd
+
+import qutip
+```
+
+Note que desta vez precisamos importar métodos auxiliares do Qiskit e também o numpy do pennylane que será posteriormente usado apenas para transformar um tipo de dado (statevector) do qiskit para um tensor do numpy. Prosseguimos com a definição da nossa função principal:
+
+```
+def function():
+
+    n_wires = 6
+    n_layers = 2
+
+    # rotation block:
+    rot = QuantumCircuit(2)
+    params = ParameterVector('r', 2)
+    params = (uniform(0,2*pi), uniform(0,2*pi))
+    print("\nParâmetros de rotação: {}".format(params))
+    rot.ry(params[0], 0)
+    rot.rz(params[1], 1)
+
+    # entanglement block:
+    ent = QuantumCircuit(4)
+    params = ParameterVector('e', 3)
+    params = (uniform(0,2*pi), uniform(0,2*pi), uniform(0,2*pi))
+    print("Parâmetros de rotação/emaranhamento: {}".format(params))
+    ent.crx(params[0], 0, 1)
+    ent.crx(params[1], 1, 2)
+    ent.crx(params[2], 2, 3)
+
+    qc_nlocal = NLocal(num_qubits=6, rotation_blocks=rot,
+                   entanglement_blocks=ent, reps=n_layers, entanglement='linear',
+                   skip_final_rotation_layer=True, insert_barriers=True)
+
+    print("\n")
+    print("Circuito gerado: {}".format(qc_nlocal.decompose().draw()))
+
+    backend = Aer.get_backend('statevector_simulator')
+    ket = execute(qc_nlocal,backend).result().get_statevector()
+
+    ket = np.array(ket)    #Transformamos nosso StateVector em um tensor do numpy (do pennylane)
+    
+    print("\n")
+    print("Estado gerado pelo modelo: {}".format(ket))
+
+    def compute_Q_ptrace(ket, N):
+
+        ket = qutip.Qobj(ket, dims=[[2]*(N), [1]*(N)]).unit()
+
+        entanglement_sum = 0
+        for k in range(N):
+            rho_k_sq = ket.ptrace([k])**2
+            entanglement_sum += rho_k_sq.tr()  
+   
+        Q = 2*(1 - (1/N)*entanglement_sum)
+        return Q
+
+    Q = compute_Q_ptrace(ket, n_wires)
+    print("\nCircuito gerando estado com grau de emaranhamento: ", Q)
+    print("\n\n==========================================================================\n\n")
+
+    return Q
+
+```
+
+Note que para utilizar o NLocal, mudamos a forma com que caracterizamos nosso vetor de matrizes de pesos (ou parâmetros). Desta vez criamos dois blocos: rotation block e entangling block especificando cada um destes com parâmetros diferentes. O motivo disto é meramente porque a implementação do Qiskit recomendou desta forma e os argumentos da função NLocal sugerem esta estruturação. É interessante deixar deste formato porque temos mais proximidade com os vetores paramétricos.
+Após a criação do circuito, executamos ele e guardamos o estado resultado na variável ket que é transformada em um tensor do numpy/pennylane. Esta conversão é necessária para a execução desta rotina da forma com que foi feita.
+Por fim, imprimimos o estado, o circuito e o grau de emaranhamento do estado gerado bem como os pesos correspondentes do circuito.
+Prosseguimos com as repetição do modelo, conforme é feito exatamente nos outros layers.
+
+
+```
+iteracoes = 2
+
+k=[]
+for i in range(iteracoes):
+    print("=============")
+    print("= Modelo: {} =".format(i))
+    print("=============\n")
+    k.append(function())
+
+for i in range(iteracoes):
+    print("\n Grau de Emaranhamento {} do modelo {}".format(k[i],i), end='')
+
+dicionario = {"Grau de Emaranhamento": k}
+df = pd.DataFrame(dicionario)
+
+
+df.describe()
+
+```
+
+#### TwoLocal
+#### PauliTwoDesign
+#### RealAmplitudes
+#### EfficientSU2
+#### ExcitationPreserving
+#### QAOAAnsatz
 
 
 ## Conclusão
-
-
+[escrever]
+Comparar os métodos e resultados superficialmente
 
 ## Apêndice
 
-#### Apêndice I: Meyer-Wallach Measure em Python
+#### Apêndice I: Métrica utilizada para o cálculo do grau de emaranhamento: Meyer-Wallach Measure em Python
 
 Um script para calcular o quão emaranhado é um estado, baseado na referência [ref. VI] é este abaixo. Nele, é executado dois estados: um de Bell (maximamente emaranhado em sistemas de 2 qubits) e outro estado puro (minimamente emaranhado em sistemas de 2 qubits).
 
@@ -406,6 +926,9 @@ if __name__ == "__main__":
 
 ```
 
+#### Apêndice II: Métrica utilizada para o cálculo de expressabilidade em Python
+
+### Futuro
 
 ### Referências
 
@@ -438,3 +961,15 @@ XIII. https://docs.pennylane.ai/en/stable/code/api/pennylane.BasicEntanglerLayer
 XIV. https://strawberryfields.ai/photonics/demos/run_gate_visualization.html
 
 XV. https://arxiv.org/abs/1804.00633
+
+XVI. https://qiskit.org/documentation/stubs/qiskit.circuit.library.TwoLocal.html#qiskit.circuit.library.TwoLocal
+
+XVII. https://qiskit.org/documentation/stubs/qiskit.circuit.library.PauliTwoDesign.html#qiskit.circuit.library.PauliTwoDesign
+
+XVIII. https://qiskit.org/documentation/stubs/qiskit.circuit.library.RealAmplitudes.html#qiskit.circuit.library.RealAmplitudes
+
+XIX. https://qiskit.org/documentation/stubs/qiskit.circuit.library.EfficientSU2.html#qiskit.circuit.library.EfficientSU2
+
+XX. https://qiskit.org/documentation/stubs/qiskit.circuit.library.ExcitationPreserving.html#qiskit.circuit.library.ExcitationPreserving
+
+XXI. https://qiskit.org/documentation/stubs/qiskit.circuit.library.QAOAAnsatz.html#qiskit.circuit.library.QAOAAnsatz
